@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "editor": "wokwi",
+  "parts": [
+    { "type": "board-esp32-s3-devkitc-1", "id": "esp1", "top": 66, "left": 233, "attrs": { "serialInterface": "USB_SERIAL_JTAG" } },
+    { "type": "wokwi-mpu6050", "id": "imu1", "top": 186, "left": 13, "attrs": {} }
+  ],
+  "connections": [
+    [ "imu1:VCC", "esp1:3V3", "red", [] ],
+    [ "imu1:GND", "esp1:GND", "black", [] ],
+    [ "imu1:SDA", "esp1:8", "green", [] ],
+    [ "imu1:SCL", "esp1:9", "blue", [] ]
+  ],
+  "dependencies": {}
+}
