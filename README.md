@@ -1,69 +1,169 @@
-| Supported Targets | ESP32 | ESP32-C2 | ESP32-C3 | ESP32-C5 | ESP32-C6 | ESP32-C61 | ESP32-H2 | ESP32-H21 | ESP32-H4 | ESP32-P4 | ESP32-S2 | ESP32-S3 |
-| ----------------- | ----- | -------- | -------- | -------- | -------- | --------- | -------- | --------- | -------- | -------- | -------- | -------- |
+# Atividade Avaliativa Pratica - Leitura de Sensor
 
-# Blink Example
+## 1. Objetivo
 
-(See the README.md file in the upper level 'examples' directory for more information about examples.)
+Desenvolver uma aplicacao embarcada completa utilizando `ESP-IDF` no `VS Code`, com simulacao no `Wokwi`, para ler dados de um sensor e exibir os resultados no monitor serial.
 
-This example demonstrates how to blink a LED by using the GPIO driver or using the [led_strip](https://components.espressif.com/component/espressif/led_strip) library if the LED is addressable e.g. [WS2812](https://cdn-shop.adafruit.com/datasheets/WS2812B.pdf). The `led_strip` library is installed via [component manager](main/idf_component.yml).
+Neste projeto, foi utilizado o sensor `MPU6050`, realizando a leitura de:
 
-## How to Use Example
+- aceleracao nos eixos `X`, `Y` e `Z`
+- velocidade angular do giroscopio nos eixos `X`, `Y` e `Z`
 
-Before project configuration and build, be sure to set the correct chip target using `idf.py set-target <chip_name>`.
+## 2. Escolhas do Projeto
 
-### Hardware Required
+### Sensor escolhido: `MPU6050`
 
-* A development board with normal LED or addressable LED on-board (e.g., ESP32-S3-DevKitC, ESP32-C6-DevKitC etc.)
-* A USB cable for Power supply and programming
+O `MPU6050` foi escolhido porque:
 
-See [Development Boards](https://www.espressif.com/en/products/devkits) for more information about it.
+- esta disponivel no `Wokwi`
+- atende diretamente ao requisito da atividade
+- permite demonstrar leitura de dois conjuntos de dados no mesmo componente: acelerometro e giroscopio
 
-### Configure the Project
+### Placa escolhida: `ESP32-S3`
 
-Open the project configuration menu (`idf.py menuconfig`).
+Foi utilizado o `ESP32-S3 DevKitC-1` porque:
 
-In the `Example Configuration` menu:
+- possui suporte completo no `ESP-IDF`
+- esta disponivel no `Wokwi`
+- oferece uma integracao direta com o fluxo de build e simulacao no `VS Code`
 
-* Select the LED type in the `Blink LED type` option.
-  * Use `GPIO` for regular LED
-  * Use `LED strip` for addressable LED
-* If the LED type is `LED strip`, select the backend peripheral
-  * `RMT` is only available for ESP targets with RMT peripheral supported
-  * `SPI` is available for all ESP targets
-* Set the GPIO number used for the signal in the `Blink GPIO number` option.
-* Set the blinking period in the `Blink period in ms` option.
+### Comunicacao escolhida: `I2C`
 
-### Build and Flash
+A comunicacao com o `MPU6050` foi implementada via `I2C`, porque:
 
-Run `idf.py -p PORT flash monitor` to build, flash and monitor the project.
+- e a interface nativa do sensor
+- utiliza poucos pinos
+- e bem suportada pelo `ESP-IDF`
 
-(To exit the serial monitor, type ``Ctrl-]``.)
+### Estrategia de implementacao
 
-See the [Getting Started Guide](https://docs.espressif.com/projects/esp-idf/en/latest/get-started/index.html) for full steps to configure and use ESP-IDF to build projects.
+Em vez de depender de uma biblioteca externa especifica para o `MPU6050`, a leitura foi implementada diretamente em `C` usando a API de `I2C` do `ESP-IDF`. Essa decisao foi tomada para:
 
-## Example Output
+- deixar a inicializacao e a leitura explicitas
+- demonstrar dominio da comunicacao com registradores
+- manter o projeto simples, controlado e facil de explicar na entrega
 
-As you run the example, you will see the LED blinking, according to the previously defined period. For the addressable LED, you can also change the LED color by setting the `led_strip_set_pixel(led_strip, 0, 16, 16, 16);` (LED Strip, Pixel Number, Red, Green, Blue) with values from 0 to 255 in the [source file](main/mpu6050_reader_main.c).
+## 3. Requisitos da Atividade e Como Foram Atendidos
+
+| Requisito | Situacao |
+| --- | --- |
+| Configuracao do `ESP-IDF` | Atendido |
+| Configuracao da simulacao no `Wokwi` | Atendido |
+| Escolha de sensor disponivel no `Wokwi` | Atendido com `MPU6050` |
+| Montagem correta do circuito | Atendido |
+| Inicializacao correta do sensor | Atendido |
+| Implementacao em `C` | Atendido |
+| Leitura no monitor serial | Atendido |
+| Codigo compilando sem erros | Atendido |
+
+## 4. Montagem do Circuito no Wokwi
+
+Arquivo principal do circuito:
+
+- [diagram.json](./diagram.json)
+
+Componentes utilizados:
+
+- `ESP32-S3 DevKitC-1`
+- `MPU6050`
+
+Ligacoes realizadas:
+
+| Pino do MPU6050 | Pino do ESP32-S3 |
+| --- | --- |
+| `VCC` | `3V3` |
+| `GND` | `GND` |
+| `SDA` | `GPIO 8` |
+| `SCL` | `GPIO 9` |
+
+## 5. Estrutura do Projeto
+
+Os arquivos mais importantes do projeto sao:
+
+- [CMakeLists.txt](./CMakeLists.txt): definicao do projeto `ESP-IDF`
+- [wokwi.toml](./wokwi.toml): integracao da simulacao com os binarios gerados
+- [diagram.json](./diagram.json): circuito da simulacao
+- [main/mpu6050_reader_main.c](./main/mpu6050_reader_main.c): firmware principal da leitura do sensor
+- [main/CMakeLists.txt](./main/CMakeLists.txt): configuracao do componente `main`
+
+## 6. Funcionamento do Firmware
+
+O fluxo principal da aplicacao e:
+
+1. inicializar o barramento `I2C`
+2. detectar o sensor no endereco `0x68`
+3. ler o registrador `WHO_AM_I`
+4. acordar o `MPU6050` pelo registrador `PWR_MGMT_1`
+5. ler os registradores do acelerometro
+6. ler os registradores do giroscopio
+7. converter os dados brutos para `g` no acelerometro e `dps` no giroscopio
+8. imprimir os valores no monitor serial a cada `1000 ms`
+
+### Parametros definidos no codigo
+
+- Endereco `I2C` do sensor: `0x68`
+- `SDA`: `GPIO 8`
+- `SCL`: `GPIO 9`
+- Clock `I2C`: `400000 Hz`
+- Intervalo entre leituras: `1000 ms`
+
+## 7. Arquitetura de Leitura
+
+As principais decisoes de estrutura no codigo foram:
+
+- criar funcoes separadas para escrita e leitura de registradores
+- encapsular a leitura de tres eixos em uma estrutura `axis3_t`
+- validar o sensor antes de iniciar a leitura continua
+- manter logs objetivos no serial para facilitar demonstracao e depuracao
+
+Isso deixou o projeto mais organizado e mais facil de apresentar na atividade.
+
+## 8. Como Executar
+
+### Compilacao no VS Code
+
+1. abrir o projeto no `VS Code`
+2. garantir que o target esteja como `esp32s3`
+3. executar `ESP-IDF: Build your project`
+
+### Simulacao no Wokwi
+
+1. abrir a paleta de comandos
+2. executar `Wokwi: Start Simulator`
+3. acompanhar a saida no monitor serial
+
+## 9. Exemplo de Saida no Monitor Serial
+
+Saida obtida durante a simulacao:
 
 ```text
-I (315) example: Example configured to blink addressable LED!
-I (325) example: Turning the LED OFF!
-I (1325) example: Turning the LED ON!
-I (2325) example: Turning the LED OFF!
-I (3325) example: Turning the LED ON!
-I (4325) example: Turning the LED OFF!
-I (5325) example: Turning the LED ON!
-I (6325) example: Turning the LED OFF!
-I (7325) example: Turning the LED ON!
-I (8325) example: Turning the LED OFF!
+I (32) main_task: Calling app_main()
+Iniciando leitura do MPU6050...
+I (132) mpu6050_reader: MPU6050 inicializado com sucesso. WHO_AM_I=0x68
+I (132) mpu6050_reader: Accel[g] X=0.00 Y=0.00 Z=1.00 | Gyro[dps] X=0.00 Y=0.00 Z=0.00
+I (1132) mpu6050_reader: Accel[g] X=0.00 Y=0.00 Z=1.00 | Gyro[dps] X=0.00 Y=0.00 Z=0.00
+I (2132) mpu6050_reader: Accel[g] X=0.00 Y=0.00 Z=1.00 | Gyro[dps] X=0.00 Y=0.00 Z=0.00
 ```
 
-Note: The color order could be different according to the LED model.
+Esses valores sao coerentes com o sensor em repouso na simulacao:
 
-The pixel number indicates the pixel position in the LED strip. For a single LED, use 0.
+- aceleracao em `Z` proxima de `1 g`
+- giroscopio proximo de `0 dps`
 
-## Troubleshooting
+## 10. Repositorio
 
-* If the LED isn't blinking, check the GPIO or the LED type selection in the `Example Configuration` menu.
+Repositorio da entrega:
 
-For any technical queries, please open an [issue](https://github.com/espressif/esp-idf/issues) on GitHub. We will get back to you soon.
+- `https://github.com/sanmartin21/esp32s3-mpu6050-wokwi`
+
+## 11. Conclusao
+
+O projeto atende a proposta da atividade, pois realiza:
+
+- configuracao do ambiente `ESP-IDF`
+- simulacao no `Wokwi`
+- leitura de sensor embarcado
+- inicializacao correta do `MPU6050`
+- exibicao continua dos dados no monitor serial
+
+Alem disso, as escolhas de estrutura adotadas no codigo priorizaram clareza, controle direto do hardware e facilidade de demonstracao.
